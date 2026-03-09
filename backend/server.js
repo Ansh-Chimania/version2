@@ -27,7 +27,7 @@ const limiter = rateLimit({
 
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: ['http://localhost:3000'], credentials: true }));
+app.use(cors({ origin: ['https://version2-jri3.onrender.com'], credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));
 app.use('/api/', limiter);
