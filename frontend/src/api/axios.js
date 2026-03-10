@@ -1,7 +1,7 @@
 import axios from 'axios';
 import supabase from './supabase';
 
-const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const apiBaseUrl = process.env.REACT_APP_API_URL || 'https://streamix-api-oysw.onrender.com';
 
 const API = axios.create({
   baseURL: `${apiBaseUrl.replace(/\/$/, '')}/api`,
