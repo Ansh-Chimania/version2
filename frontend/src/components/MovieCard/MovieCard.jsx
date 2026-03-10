@@ -99,4 +99,4 @@ const MovieCard = ({ item, showMediaType = false }) => {
   );
 };
 
-export default MovieCard;
+export default React.memo(MovieCard);

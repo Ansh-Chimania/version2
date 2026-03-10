@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchTrending,
@@ -12,65 +12,79 @@ import {
 import { fetchFavorites } from '../../store/slices/favoriteSlice';
 import HeroBanner from '../../components/HeroBanner/HeroBanner';
 import MovieRow from '../../components/MovieRow/MovieRow';
-import Loader from '../../components/Loader/Loader';
 import Skeleton from '../../components/Loader/Skeleton';
 import './Home.css';
 
 const Home = () => {
   const dispatch = useDispatch();
-  const { trending, popular, topRated, upcoming, nowPlaying, popularTV, topRatedTV, loading } = useSelector(state => state.movies);
+  const { trending, popular, topRated, upcoming, nowPlaying, popularTV, topRatedTV } = useSelector(state => state.movies);
   const { isAuthenticated } = useSelector(state => state.auth);
 
   useEffect(() => {
+    // Fire the most important call first, the rest load progressively
     dispatch(fetchTrending({ timeWindow: 'week', page: 1 }));
-    dispatch(fetchPopularMovies(1));
-    dispatch(fetchTopRatedMovies(1));
-    dispatch(fetchUpcomingMovies(1));
-    dispatch(fetchNowPlaying(1));
-    dispatch(fetchPopularTV(1));
-    dispatch(fetchTopRatedTV(1));
+
+    // Stagger other calls slightly to reduce backend pressure
+    const timer1 = setTimeout(() => {
+      dispatch(fetchPopularMovies(1));
+      dispatch(fetchNowPlaying(1));
+    }, 50);
+
+    const timer2 = setTimeout(() => {
+      dispatch(fetchPopularTV(1));
+      dispatch(fetchTopRatedMovies(1));
+    }, 100);
+
+    const timer3 = setTimeout(() => {
+      dispatch(fetchUpcomingMovies(1));
+      dispatch(fetchTopRatedTV(1));
+    }, 150);
+
     if (isAuthenticated) dispatch(fetchFavorites());
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
   }, [dispatch, isAuthenticated]);
 
-  if (loading && !trending.results.length) {
-    return <Loader fullPage />;
-  }
+  // Memoize rows to prevent unnecessary re-renders
+  const rows = useMemo(() => [
+    { data: trending, title: '🔥 Trending This Week', showMediaType: true },
+    { data: nowPlaying, title: '🎬 Now Playing', link: '/explore/movie' },
+    { data: popular, title: '🌟 Popular Movies', link: '/explore/movie' },
+    { data: popularTV, title: '📺 Popular TV Shows', link: '/explore/tv' },
+    { data: topRated, title: '⭐ Top Rated Movies', link: '/explore/movie' },
+    { data: upcoming, title: '🎥 Upcoming Movies' },
+    { data: topRatedTV, title: '🏆 Top Rated TV Shows', link: '/explore/tv' }
+  ], [trending, nowPlaying, popular, popularTV, topRated, upcoming, topRatedTV]);
 
   return (
     <div className="home-page">
-      <HeroBanner items={trending.results} />
+      {trending.results.length ? (
+        <HeroBanner items={trending.results} />
+      ) : (
+        <div className="hero-placeholder" />
+      )}
 
       <div className="home-content">
-        {trending.results.length ? (
-          <MovieRow title="🔥 Trending This Week" items={trending.results} showMediaType />
-        ) : <Skeleton />}
-
-        {nowPlaying.results.length ? (
-          <MovieRow title="🎬 Now Playing" items={nowPlaying.results} link="/explore/movie" />
-        ) : <Skeleton />}
-
-        {popular.results.length ? (
-          <MovieRow title="🌟 Popular Movies" items={popular.results} link="/explore/movie" />
-        ) : <Skeleton />}
-
-        {popularTV.results.length ? (
-          <MovieRow title="📺 Popular TV Shows" items={popularTV.results} link="/explore/tv" />
-        ) : <Skeleton />}
-
-        {topRated.results.length ? (
-          <MovieRow title="⭐ Top Rated Movies" items={topRated.results} link="/explore/movie" />
-        ) : <Skeleton />}
-
-        {upcoming.results.length ? (
-          <MovieRow title="🎥 Upcoming Movies" items={upcoming.results} />
-        ) : <Skeleton />}
-
-        {topRatedTV.results.length ? (
-          <MovieRow title="🏆 Top Rated TV Shows" items={topRatedTV.results} link="/explore/tv" />
-        ) : <Skeleton />}
+        {rows.map((row) => (
+          row.data.results.length ? (
+            <MovieRow
+              key={row.title}
+              title={row.title}
+              items={row.data.results}
+              link={row.link}
+              showMediaType={row.showMediaType}
+            />
+          ) : (
+            <Skeleton key={row.title} />
+          )
+        ))}
       </div>
     </div>
   );
 };
 
-export default Home;
+export default React.memo(Home);

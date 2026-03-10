@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import supabase from './api/supabase';
+import { setSession, logout } from './store/slices/authSlice';
 
 // Layout Components
 import Navbar from './components/Navbar/Navbar';
@@ -29,10 +31,29 @@ import NotFound from './pages/NotFound/NotFound';
 
 const App = () => {
   const { theme } = useSelector(state => state.ui);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  // Listen for Supabase auth state changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT' || !session) {
+          dispatch(logout());
+        } else if (event === 'TOKEN_REFRESHED' && session) {
+          // Update token in localStorage when Supabase auto-refreshes
+          localStorage.setItem('cineverse_token', session.access_token);
+        }
+      }
+    );
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [dispatch]);
 
   return (
     <>

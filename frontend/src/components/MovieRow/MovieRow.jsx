@@ -56,4 +56,4 @@ const MovieRow = ({ title, items = [], link, showMediaType = false }) => {
   );
 };
 
-export default MovieRow;
+export default React.memo(MovieRow);
